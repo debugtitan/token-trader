@@ -25,7 +25,7 @@ class SolanaClient:
     def __init__(self, rpc: str = RPC_NODE, keys: str = None) -> None:
         try:
             if keys:
-                self.keypair = Keypair.from_base58_string(keys)
+                self.keypair = Keypair.from_base58_string(str(keys))
                 logger.info(f"Keypair successfully initialized.{self.keypair.pubkey()}")
         except Exception as e:
             logger.error("Class instance error")
@@ -98,7 +98,9 @@ class SolanaClient:
 
     async def pool_info(self, amm_id):
         data = (
-            await self.client.get_account_info_json_parsed(Pubkey.from_string(str(amm_id)))
+            await self.client.get_account_info_json_parsed(
+                Pubkey.from_string(str(amm_id))
+            )
         ).value.data
         _data_decoded = AMM_INFO_LAYOUT_V4_1.parse(data)
         OPEN_BOOK_PROGRAM = Pubkey.from_bytes(_data_decoded.serumProgramId)
