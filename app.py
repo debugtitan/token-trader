@@ -16,7 +16,10 @@ def get_sell_amount(wallet_holding: float):
 async def main():
     """base runner"""
     wallets = read_private_keys()
+    if not wallets:
+        raise ValueError("No valid private keys found in the file.")
     selected_key = random.choice(wallets)
+    logger.info(selected_key)
     client = RaydiumClient(keys=selected_key)
     wallet_sol_balance = await client.balance()
     wallet_address = await client.wallet_address()
@@ -28,11 +31,15 @@ async def main():
     logger.info(
         f"""Performing Sell \n\nWallet: {wallet_address}\nBal SOL: {wallet_sol_balance}\nToken Balance: {wallet_token_balance}\nAmount to sell: {sell_holdings}"""
     )
-    await client.make_sell_swap(TEST_AMM_KEY, int(sell_holdings * 10**9))
+    logger.info(
+        await client.make_sell_swap(
+            TEST_AMM_KEY, int(sell_holdings * 10**9), TEST_TOKEN
+        )
+    )
 
 
 if __name__ == "__main__":
     with suppress(KeyboardInterrupt) as error:
-        while True:
-            asyncio.run(main())
-            time.sleep(60)
+        # while True:
+        asyncio.run(main())
+        # time.sleep(60)
