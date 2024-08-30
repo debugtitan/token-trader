@@ -2,12 +2,24 @@ from io import BytesIO
 
 from borsh_construct import CStruct, String, U8, U16, U64, Vec, Option, Bool, Enum
 
-from construct import Bytes, Int8ul, Int64ul, Padding, BitsInteger, BitsSwapped, BitStruct, Const, Flag, BytesInteger
+from construct import (
+    Bytes,
+    Int8ul,
+    Int32ul,
+    Int64ul,
+    Padding,
+    BitsInteger,
+    BitsSwapped,
+    BitStruct,
+    Const,
+    Flag,
+    BytesInteger,
+)
 from construct import Struct as cStruct
 
 import base58, json
 
-from solders.pubkey import Pubkey # type: ignore
+from solders.pubkey import Pubkey  # type: ignore
 
 
 class MyEncoder(json.JSONEncoder):
@@ -86,7 +98,6 @@ def getMetaData(data):
 SWAP_LAYOUT = cStruct(
     "instruction" / Int8ul, "amount_in" / Int64ul, "min_amount_out" / Int64ul
 )
-
 
 
 AMM_INFO_LAYOUT_V4_1 = cStruct(
@@ -187,11 +198,24 @@ MARKET_LAYOUT = cStruct(
 
 MINT_LAYOUT = cStruct(Padding(44), "decimals" / Int8ul, Padding(37))
 
-
+PUBLIC_KEY_LAYOUT = Bytes(32)
 POOL_INFO_LAYOUT = cStruct("instruction" / Int8ul, "simulate_type" / Int8ul)
 
 LIQ_LAYOUT = cStruct("instruction" / Int8ul, "amount_in" / Int64ul)
 
 SWAP_LAYOUT = cStruct(
     "instruction" / Int8ul, "amount_in" / Int64ul, "min_amount_out" / Int64ul
+)
+ACCOUNT_LAYOUT = cStruct(
+    "mint" / PUBLIC_KEY_LAYOUT,
+    "owner" / PUBLIC_KEY_LAYOUT,
+    "amount" / Int64ul,
+    "delegate_option" / Int32ul,
+    "delegate" / PUBLIC_KEY_LAYOUT,
+    "state" / Int8ul,
+    "is_native_option" / Int32ul,
+    "is_native" / Int64ul,
+    "delegated_amount" / Int64ul,
+    "close_authority_option" / Int32ul,
+    "close_authority" / PUBLIC_KEY_LAYOUT,
 )
