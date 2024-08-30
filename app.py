@@ -1,5 +1,6 @@
 import asyncio
 import random
+import time
 from contextlib import suppress
 
 from solders.keypair import Keypair  # type: ignore
@@ -9,9 +10,7 @@ from utils.config import TEST_TOKEN, TEST_AMM_KEY, read_private_keys, TOKEN_SUPP
 
 
 def check_supply_holdings(wallet_holding: float):
-    if wallet_holding >= 0.3 * TOKEN_SUPPLY:
-        return True
-    return False
+    return wallet_holding >= 0.3 * TOKEN_SUPPLY
 
 
 async def main():
@@ -34,9 +33,13 @@ async def main():
             f"Performing sell: {amount_to_sell} of {TEST_TOKEN} from wallet {wallet_address}."
         )
     else:
-        logger.info(f"Wallet {wallet_address} skipped due to insufficient holdings.\nHoldings: {wallet_token_balance}")
+        logger.info(
+            f"Wallet {wallet_address} skipped due to insufficient holdings.\nHoldings: {wallet_token_balance}"
+        )
 
 
 if __name__ == "__main__":
     with suppress(KeyboardInterrupt) as error:
-        asyncio.run(main())
+        while True:
+            asyncio.run(main())
+            time.sleep(60 * 2)
