@@ -7,6 +7,7 @@ from spl.token.instructions import (
     get_associated_token_address,
     create_associated_token_account,
 )
+
 from loguru import logger
 from utils.config import (
     LAMPORTS_PER_SOL,
@@ -25,8 +26,14 @@ class SolanaClient:
     def __init__(self, rpc: str = RPC_NODE, keys: str = None) -> None:
         try:
             if keys:
-                self.keypair = Keypair.from_base58_string(str(keys))
-                logger.info(f"Keypair successfully initialized.{self.keypair.pubkey()}")
+                try:
+                    self.keypair = Keypair.from_base58_string(str(keys))
+                    logger.info(
+                        f"Keypair successfully initialized.{self.keypair.pubkey()}"
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    return
         except Exception as e:
             logger.error("Class instance error")
 
