@@ -1,9 +1,12 @@
 from typing import List, Union
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.types import MemcmpOpts
+from solana.rpc.types import MemcmpOpts, TokenAccountOpts
 from solders.pubkey import Pubkey  # type: ignore
 from solders.keypair import Keypair  # type: ignore
-from spl.token.instructions import get_associated_token_address
+from spl.token.instructions import (
+    get_associated_token_address,
+    create_associated_token_account,
+)
 from loguru import logger
 from utils.config import (
     LAMPORTS_PER_SOL,
@@ -17,10 +20,10 @@ from utils.extractor import AMM_INFO_LAYOUT_V4_1, MARKET_LAYOUT
 
 class SolanaClient:
     keypair = None
+    client = AsyncClient(RPC_NODE)
 
     def __init__(self, rpc: str = RPC_NODE, keys: str = None) -> None:
         try:
-            self.client = AsyncClient(RPC_NODE)
             if keys:
                 self.keypair = Keypair.from_base58_string(keys)
                 logger.info(f"Keypair successfully initialized.{self.keypair.pubkey()}")
@@ -67,7 +70,31 @@ class SolanaClient:
         token_balance = await self.client.get_token_account_balance(
             associate_token_address
         )
-        return token_balance.value.ui_amount
+        return token_balance.value.amount
+
+    async def get_token_account(
+        self, mint: str, ignore_keypair: bool = False, pubkey: str = None
+    ):
+        if ignore_keypair and not pubkey:
+            raise ValueError("supply a keypair or pubkey")
+        if not self.keypair and not ignore_keypair:
+            raise ValueError("supply keypair or pubkey")
+        _pubkey = (
+            Pubkey.from_string(pubkey) if ignore_keypair else self.keypair.pubkey()
+        )
+        try:
+            account_data = await self.client.get_token_accounts_by_owner(
+                _pubkey, TokenAccountOpts(mint)
+            )
+            token_account = account_data.value[0].pubkey
+            token_account_instructions = None
+            return token_account, token_account_instructions
+        except:
+            token_account = get_associated_token_address(_pubkey, mint)
+            token_account_instructions = create_associated_token_account(
+                _pubkey, _pubkey, mint
+            )
+            return token_account, token_account_instructions
 
     async def pool_info(self, amm_id):
         data = (
