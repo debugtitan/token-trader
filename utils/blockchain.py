@@ -70,7 +70,7 @@ class SolanaClient:
         token_balance = await self.client.get_token_account_balance(
             associate_token_address
         )
-        return token_balance.value.amount
+        return token_balance.value.ui_amount
 
     async def get_token_account(
         self, mint: str, ignore_keypair: bool = False, pubkey: str = None
@@ -98,7 +98,7 @@ class SolanaClient:
 
     async def pool_info(self, amm_id):
         data = (
-            await self.client.get_account_info_json_parsed(Pubkey.from_string(amm_id))
+            await self.client.get_account_info_json_parsed(Pubkey.from_string(str(amm_id)))
         ).value.data
         _data_decoded = AMM_INFO_LAYOUT_V4_1.parse(data)
         OPEN_BOOK_PROGRAM = Pubkey.from_bytes(_data_decoded.serumProgramId)
@@ -145,14 +145,14 @@ class SolanaClient:
         logger.info(pool_keys)
 
     # AMM ID should be hard coded in a config
-    # async def fetch_amm_id(self, mint):
+    async def fetch_amm_id(self, mint):
 
-    #     memcmp_opts_1 = MemcmpOpts(offset=400, bytes=str(mint))
-    #     memcmp_opts_2 = MemcmpOpts(offset=432, bytes=str(WSOL))
-    #     filters: List[Union[int, MemcmpOpts]] = [752, memcmp_opts_1, memcmp_opts_2]
-    #     resp = await self.client.get_program_accounts(
-    #         Pubkey.from_string(str(RAYDIUM_LIQUIDITY_POOL)),
-    #         encoding="base64",
-    #         filters=filters,
-    #     )
-    #     return resp.value[0].pubkey
+        memcmp_opts_1 = MemcmpOpts(offset=400, bytes=str(mint))
+        memcmp_opts_2 = MemcmpOpts(offset=432, bytes=str(WSOL))
+        filters: List[Union[int, MemcmpOpts]] = [752, memcmp_opts_1, memcmp_opts_2]
+        resp = await self.client.get_program_accounts(
+            Pubkey.from_string(str(RAYDIUM_LIQUIDITY_POOL)),
+            encoding="base64",
+            filters=filters,
+        )
+        return resp.value[0].pubkey

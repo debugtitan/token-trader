@@ -12,7 +12,7 @@ from spl.token.client import Token
 from spl.token.instructions import close_account, CloseAccountParams
 import spl.token.instructions as spl_token_instructions
 from loguru import logger
-from blockchain import SolanaClient
+from utils.blockchain import SolanaClient
 from utils.config import (
     RPC_NODE,
     WSOL,
@@ -26,12 +26,11 @@ from utils.config import (
 from utils.extractor import ACCOUNT_LAYOUT, SWAP_LAYOUT
 
 
-class Raydium(SolanaClient):
-    def __init__(self, pair_address: str = RPC_NODE, keys: str = None) -> None:
-        super().__init__(keys)
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-        self.pool_keys = self.loop.run_until_complete(self.pool_info(pair_address))
+class RaydiumClient(SolanaClient):
+    """Raydium helper"""
+
+    def __init__(self, keys: str = None) -> None:
+        super().__init__(keys=keys)
 
     def make_swap_instruction(
         self,
@@ -135,18 +134,18 @@ class Raydium(SolanaClient):
         logger.error("Max retries reached. Transaction confirmation failed.")
         return None
 
-    async def make_buy_swap(self, amount_in_sol: float):
-
+    async def make_buy_swap(self, pair: Pubkey, amount_in_sol: float):
+        pool_keys = await self.pool_info(pair)
         # Check if pool keys exist
-        if self.pool_keys is None:
+        if pool_keys is None:
             logger.error("No pools keys found...")
             return None
 
         # Determine the mint based on pool keys
         mint = (
-            self.pool_keys["base_mint"]
-            if str(self.pool_keys["base_mint"]) != WSOL
-            else self.pool_keys["quote_mint"]
+            pool_keys["base_mint"]
+            if str(pool_keys["base_mint"]) != WSOL
+            else pool_keys["quote_mint"]
         )
 
         # swap amount
@@ -192,7 +191,7 @@ class Raydium(SolanaClient):
         # Create swap instructions
         logger.info("Creating swap instructions...")
         swap_instructions = self.make_swap_instruction(
-            amount_in, wsol_token_account, token_account, self.pool_keys, self.keypair
+            amount_in, wsol_token_account, token_account, pool_keys, self.keypair
         )
 
         # Create close account instructions for wSOL account
@@ -242,20 +241,20 @@ class Raydium(SolanaClient):
             return
         # TODO: retry
 
-    async def make_sell_swap(self, amount_in_lamports: int):
+    async def make_sell_swap(self, pair: Pubkey, amount_in_lamports: int):
 
         # Convert amount to integer
         amount_in = int(amount_in_lamports)
-
-        if self.pool_keys is None:
+        pool_keys = await self.pool_info(pair)
+        if pool_keys is None:
             logger.info("No pools keys found...")
             return None
 
         # Determine the mint based on pool keys
         mint = (
-            self.pool_keys["base_mint"]
-            if str(self.pool_keys["base_mint"]) != WSOL
-            else self.pool_keys["quote_mint"]
+            pool_keys["base_mint"]
+            if str(pool_keys["base_mint"]) != WSOL
+            else pool_keys["quote_mint"]
         )
 
         token_account = (
@@ -273,7 +272,7 @@ class Raydium(SolanaClient):
 
         logger.info("Creating swap instructions...")
         swap_instructions = self.make_swap_instruction(
-            amount_in, token_account, wsol_token_account, self.pool_keys, self.keypair
+            amount_in, token_account, wsol_token_account, pool_keys, self.keypair
         )
 
         close_account_instructions = close_account(
@@ -305,9 +304,10 @@ class Raydium(SolanaClient):
         # Create and send transaction
         transaction = VersionedTransaction(compiled_message, [self.keypair])
         txn_sig = await self.client.send_transaction(
-            transaction, opts=TxOpts(skip_preflight=True, preflight_commitment="confirmed")
+            transaction,
+            opts=TxOpts(skip_preflight=True, preflight_commitment="confirmed"),
         )
-        
+
         logger.info("Transaction Signature:", txn_sig.value)
 
         # Confirm transaction

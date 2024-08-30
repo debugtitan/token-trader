@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from solders.pubkey import Pubkey  # type: ignore
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
-KEYS_PATH = os.path.join(BASE_DIR, "keys.txt")
+KEYS_PATH = os.path.join(BASE_DIR, "Wallets.txt")
 # Load our environment variables
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
@@ -31,15 +31,16 @@ TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5
 OPEN_BOOK_PROGRAM_ID = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
 """"Public address openbook market serum"""
 
-TEST_TOKEN = "7zBbQAPGgoKvqcK74Yua8qGwEkEjAZxUPb5m3kKvvHyF"
+TEST_TOKEN = "8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"
 """Our Testing Token"""
 
-TEST_AMM_KEY = "2SHSqG8NBuGJTgjErHmnpF9hp79eMG2jKfZUwheFrv62"
+TEST_AMM_KEY = "ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW"
 """Test Token AMM ID"""
 
 
 UNIT_PRICE = 10_000_000
 UNIT_BUDGET = 100_000
+TOKEN_SUPPLY = 1_000_000_000
 
 
 def read_private_keys():
