@@ -78,7 +78,7 @@ class RaySwap {
         console.log(`Wallet: ${this.wallet.publicKey}\nSOL: ${solBalance}\nTAKY: ${tokenBalance}\nSell Amount: ${sellAmount}`)
 
 
-        const outputAmount = new BN(1_000_000_000) //
+        const outputAmount = new BN(1_000_000) //
         const data = await this.raydium?.cpmm.getPoolInfoFromRpc(this.AMM_ID)
         if (data == null) {
             return
@@ -102,38 +102,38 @@ class RaySwap {
         const baseIn = this.MINT.toBase58() === poolInfo.mintB.address
         console.log(baseIn, poolInfo.mintB)
 
-            const txn = await this.raydium?.cpmm.swap({
-                poolInfo,
-                poolKeys,
-                inputAmount: new BN(0), // if set fixedOut to true, this arguments won't be used
-                fixedOut: true,
-                swapResult: {
-                    sourceAmountSwapped: swapResult.amountIn,
-                    destinationAmountSwapped: outputAmount,
-                },
-                slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01%
-                baseIn: baseIn,
-                txVersion: TxVersion.V0,
-                // optional: set up priority fee here
-                computeBudgetConfig: {
-                    units: 600000,
-                    microLamports: 1000000,
-                },
+        const txn = await this.raydium?.cpmm.swap({
+            poolInfo,
+            poolKeys,
+            inputAmount: new BN(0), // if set fixedOut to true, this arguments won't be used
+            fixedOut: true,
+            swapResult: {
+                sourceAmountSwapped: swapResult.amountIn,
+                destinationAmountSwapped: outputAmount,
+            },
+            slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01%
+            baseIn: false,
+            txVersion: TxVersion.V0,
+            // optional: set up priority fee here
+            computeBudgetConfig: {
+                units: 600000,
+                microLamports: 1000000,
+            },
+        })
+
+        if (txn == null) {
+            return
+        }
+        try {
+            const { txId } = await txn.execute({ sendAndConfirm: true })
+            console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
+                txId: `https://explorer.solana.com/tx/${txId}`,
             })
+        } catch (e) {
+            // console.log(JSON.stringify(e))
+        }
 
-            if (txn == null) {
-                return
-            }
-            try {
-                const { txId } = await txn.execute({ sendAndConfirm: true })
-                console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
-                    txId: `https://explorer.solana.com/tx/${txId}`,
-                })
-            } catch (e) {
-                // console.log(JSON.stringify(e))
-            }
 
-        
     }
 
 
