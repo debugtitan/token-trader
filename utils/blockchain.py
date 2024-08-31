@@ -1,6 +1,5 @@
-from typing import List, Union
 from solana.rpc.async_api import AsyncClient
-from solana.rpc.types import MemcmpOpts, TokenAccountOpts
+from solana.rpc.types import TokenAccountOpts
 from solders.pubkey import Pubkey  # type: ignore
 from solders.keypair import Keypair  # type: ignore
 from spl.token.instructions import (
@@ -12,14 +11,8 @@ from loguru import logger
 from utils.config import (
     LAMPORTS_PER_SOL,
     RPC_NODE,
-    RAYDIUM_LIQUIDITY_POOL,
-    TOKEN_PROGRAM_ID,
-    WSOL,
-    RAYDIUM_AUTHORITY,
-    RAYDIUM_CPMM,
-    RAYDIUM_CPMM_AUTHORITY,
 )
-from utils.extractor import AMM_INFO_LAYOUT_V4_1, MARKET_LAYOUT
+from utils.extractor import CPMM_POOL_INFO_LAYOUT
 
 
 class SolanaClient:
@@ -52,9 +45,7 @@ class SolanaClient:
 
     async def check_token_balance(self, mint: str):
         _pubkey = self.keypair.pubkey()
-        associate_token_address = get_associated_token_address(
-            _pubkey, Pubkey.from_string(mint)
-        )
+        associate_token_address = get_associated_token_address(_pubkey, mint)
         token_balance = await self.client.get_token_account_balance(
             associate_token_address
         )
@@ -62,18 +53,19 @@ class SolanaClient:
 
     async def get_token_accounts(self, mint: str):
         _pubkey = self.keypair.pubkey()
-        mint = Pubkey.from_string(mint)
         try:
             account_data = await self.client.get_token_accounts_by_owner(
-                _pubkey, TokenAccountOpts(mint=mint)
+                _pubkey, TokenAccountOpts(mint=Pubkey.from_string(mint))
             )
             token_account = account_data.value[0].pubkey
             token_account_instructions = None
             return token_account, token_account_instructions
         except:
-            token_account = get_associated_token_address(_pubkey, mint)
+            token_account = get_associated_token_address(
+                _pubkey, Pubkey.from_string(mint)
+            )
             token_account_instructions = create_associated_token_account(
-                _pubkey, _pubkey, mint
+                _pubkey, _pubkey, Pubkey.from_string(mint)
             )
             return token_account, token_account_instructions
 
@@ -82,9 +74,38 @@ class SolanaClient:
             (
                 await self.client.get_token_accounts_by_owner_json_parsed(
                     self.keypair.pubkey(),
-                    TokenAccountOpts(mint=Pubkey.from_string(mint)),
+                    TokenAccountOpts(mint=mint),
                 )
             )
             .value[0]
             .pubkey
         )
+
+    async def pool_info(self, amm_id: str):
+        amm_data = (await self.client.get_account_info_json_parsed(amm_id)).value.data
+        pool = CPMM_POOL_INFO_LAYOUT.parse(amm_data)
+
+        pool_keys = {
+            "configId": Pubkey.from_bytes(pool.configId),
+            "poolCreator": Pubkey.from_bytes(pool.poolCreator),
+            "vaultA": Pubkey.from_bytes(pool.vaultA),
+            "vaultB": Pubkey.from_bytes(pool.vaultB),
+            "mintLp": Pubkey.from_bytes(pool.mintLp),
+            "mintA": Pubkey.from_bytes(pool.mintA),
+            "mintB": Pubkey.from_bytes(pool.mintB),
+            "mintProgramA": Pubkey.from_bytes(pool.mintProgramA),
+            "mintProgramB": Pubkey.from_bytes(pool.mintProgramB),
+            "observationId": Pubkey.from_bytes(pool.observationId),
+            "bump": pool.bump,
+            "status": pool.status,
+            "lpDecimals": pool.lpDecimals,
+            "mintDecimalA": pool.mintDecimalA,
+            "mintDecimalB": pool.mintDecimalB,
+            "lpAmount": pool.lpAmount,
+            "protocolFeesMintA": pool.protocolFeesMintA,
+            "protocolFeesMintB": pool.protocolFeesMintB,
+            "fundFeesMintA": pool.fundFeesMintA,
+            "fundFeesMintB": pool.fundFeesMintB,
+            "openTime": pool.openTime,
+        }
+        return pool_keys

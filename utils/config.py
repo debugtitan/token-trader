@@ -16,7 +16,7 @@ RPC_NODE = os.getenv("RPC")
 LAMPORTS_PER_SOL = 1_000_000_000  # canalso be 10**9
 """Number of decimals for WSOL"""
 
-RAYDIUM_LIQUIDITY_POOL = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+RAYDIUM_LIQUIDITY_POOL = Pubkey.from_string("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
 """Public Address of Raydium Liquidty Pool"""
 
 RAYDIUM_AUTHORITY = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
@@ -33,16 +33,16 @@ OPEN_BOOK_PROGRAM_ID = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
 
 RAYDIUM_CPMM = Pubkey.from_string("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C")
 
-RAYDIUM_CPMM_AUTHORITY = Pubkey.from_string("GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL")
+RAYDIUM_CPMM_AUTHORITY = Pubkey.from_string(
+    "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+)
 
-TEST_TOKEN = "8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"
+TEST_TOKEN = Pubkey.from_string("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR")
 """Our Testing Token"""
 
 TEST_AMM_KEY = Pubkey.from_string("ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW")
 """Test Token AMM ID"""
 
-BASE_VAULT = Pubkey.from_string("4PXRXECejNjuLc15oW8Wmx7baSVSwijA9nqLUJsgaPBy")
-QUOTE_VAULT = Pubkey.from_string("2s1KoNYJPvbnW6TLZopxvXSyA1wak98uuV9iE2REM3Di")
 
 UNIT_PRICE = 10_000_000
 UNIT_BUDGET = 100_000

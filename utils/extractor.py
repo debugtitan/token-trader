@@ -5,6 +5,7 @@ from borsh_construct import CStruct, String, U8, U16, U64, Vec, Option, Bool, En
 from construct import (
     Bytes,
     Int8ul,
+    Int16ul,
     Int32ul,
     Int64ul,
     Padding,
@@ -14,6 +15,8 @@ from construct import (
     Const,
     Flag,
     BytesInteger,
+    Array,
+    Struct,
 )
 from construct import Struct as cStruct
 
@@ -176,7 +179,7 @@ MARKET_LAYOUT = cStruct(
     # "account_flags" / ACCOUNT_FLAGS_LAYOUT,
     # "own_address" / Bytes(32),
     "vault_signer_nonce" / Int64ul,
-    "base_mint" / Bytes(8),
+    "base_mint" / Bytes(32),
     "quote_mint" / Bytes(32),
     "base_vault" / Bytes(32),
     # "base_deposits_total" / Int64ul,
@@ -203,8 +206,10 @@ POOL_INFO_LAYOUT = cStruct("instruction" / Int8ul, "simulate_type" / Int8ul)
 
 LIQ_LAYOUT = cStruct("instruction" / Int8ul, "amount_in" / Int64ul)
 
-SWAP_LAYOUT = cStruct(
-    "instruction" / Int8ul, "amount_in" / Int64ul, "min_amount_out" / Int64ul
+SWAP_LAYOUT = Struct(
+    # "instruction" / Int8ul,
+    "amountInMax" / Int64ul,
+    "amountOut" / Int64ul,
 )
 ACCOUNT_LAYOUT = cStruct(
     "mint" / PUBLIC_KEY_LAYOUT,
@@ -218,4 +223,45 @@ ACCOUNT_LAYOUT = cStruct(
     "delegated_amount" / Int64ul,
     "close_authority_option" / Int32ul,
     "close_authority" / PUBLIC_KEY_LAYOUT,
+)
+
+CPMM_CONFIG_INFO_LAYOUT = cStruct(
+    "blob_8" / Bytes(8),
+    "bump" / Int8ul,
+    "disableCreatePool" / Flag,
+    "index" / Int16ul,
+    "tradeFeeRate" / Int64ul,
+    "protocolFeeRate" / Int64ul,
+    "fundFeeRate" / Int64ul,
+    "createPoolFee" / Int64ul,
+    "protocolOwner" / PUBLIC_KEY_LAYOUT,
+    "fundOwner" / PUBLIC_KEY_LAYOUT,
+    "seq_u64_16" / Array(16, Int64ul),
+)
+
+
+CPMM_POOL_INFO_LAYOUT = Struct(
+    "blob_8" / Bytes(8),
+    "configId" / PUBLIC_KEY_LAYOUT,
+    "poolCreator" / PUBLIC_KEY_LAYOUT,
+    "vaultA" / PUBLIC_KEY_LAYOUT,
+    "vaultB" / PUBLIC_KEY_LAYOUT,
+    "mintLp" / PUBLIC_KEY_LAYOUT,
+    "mintA" / PUBLIC_KEY_LAYOUT,
+    "mintB" / PUBLIC_KEY_LAYOUT,
+    "mintProgramA" / PUBLIC_KEY_LAYOUT,
+    "mintProgramB" / PUBLIC_KEY_LAYOUT,
+    "observationId" / PUBLIC_KEY_LAYOUT,
+    "bump" / Int8ul,
+    "status" / Int8ul,
+    "lpDecimals" / Int8ul,
+    "mintDecimalA" / Int8ul,
+    "mintDecimalB" / Int8ul,
+    "lpAmount" / Int64ul,
+    "protocolFeesMintA" / Int64ul,
+    "protocolFeesMintB" / Int64ul,
+    "fundFeesMintA" / Int64ul,
+    "fundFeesMintB" / Int64ul,
+    "openTime" / Int64ul,
+    "seq_u64_32" / Array(32, Int64ul),
 )
