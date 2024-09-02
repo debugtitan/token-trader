@@ -75,7 +75,7 @@ class RaySwap {
         console.log(`Wallet: ${this.wallet.publicKey}\nSOL: ${solBalance}\nTAKY: ${tokenBalance}\nSell Amount: ${sellAmount}`)
 
 
-        const outputAmount = new BN(sellAmount)//
+        const outputAmount = new BN(sellAmount * 10 ** 9)//
         const data = await this.raydium?.cpmm.getPoolInfoFromRpc(this.AMM_ID)
         if (data == null) {
             return
@@ -83,38 +83,30 @@ class RaySwap {
         const poolInfo = data.poolInfo
         const poolKeys = data.poolKeys
         const rpcData = data.rpcData
+
         if (poolInfo == null || rpcData == null) {
             return
         }
-        const swapResult = CurveCalculator.swapBaseOut({
-            poolMintA: poolInfo.mintA,
-            poolMintB: poolInfo.mintB,
-            tradeFeeRate: rpcData?.configInfo!.tradeFeeRate,
-            baseReserve: rpcData?.baseReserve,
-            quoteReserve: rpcData?.quoteReserve,
-            outputMint: this.WSOL,
-            outputAmount: outputAmount,
-        })
-        console.log(new BN(swapResult.amountIn).toNumber() / 10 ** 9, new BN(swapResult.amountIn).toNumber())
-
+        const baseIn = this.MINT.toString() === poolInfo.mintA.address
+        const swapResult = CurveCalculator.swap(
+            outputAmount,
+            baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
+            baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
+            rpcData.configInfo!.tradeFeeRate
+        )
 
         // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
         const txn = await this.raydium?.cpmm.swap({
             poolInfo,
             poolKeys,
-            inputAmount: new BN(sellAmount), // if set fixedOut to true, this arguments won't be used
-            fixedOut: true,
-            swapResult: {
-                sourceAmountSwapped: swapResult.amountIn,
-                destinationAmountSwapped: outputAmount,
-            },
+            inputAmount: outputAmount,
+            swapResult,
             slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01%
-            baseIn: false,
-            txVersion: TxVersion.V0,
+            baseIn,
             // optional: set up priority fee here
             computeBudgetConfig: {
                 units: 600000,
-                microLamports: 1000000,
+                microLamports: 10000000,
             },
         })
 
