@@ -1,7 +1,7 @@
 import { Keypair, PublicKey, Connection } from "@solana/web3.js"
 import { Raydium, TxVersion, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
 import bs58 from "bs58"
-import { BN } from "bn.js";
+import BN from 'bn.js'
 import dotenv from "dotenv";
 
 dotenv.config({
@@ -11,13 +11,14 @@ dotenv.config({
 
 type TradeDirection = "BUY" | "SELL"
 
-const trader = async (secretKey: string, tradeDirection: TradeDirection, amount: string) => {
+const trader = async (secretKey: string, tradeDirection: TradeDirection, amount: number) => {
     let swapResult;
-    const MINT: PublicKey = new PublicKey("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR")
+    let baseIn: boolean;
+    const MINT = "8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"
     const AMM_ID = "ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW"
     const WSOL: PublicKey = new PublicKey("So11111111111111111111111111111111111111112");
     const solanaConnection = new Connection(process.env.SOLANA_ENDPOINT ?? "https://api.mainnet-beta.solana.com");
-    const buyAmount = new BN(amount);
+    const buyAmount = new BN(amount * 10 ** 9);
     const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
     console.log(`🤖 Initiating bot for wallet: ${wallet.publicKey.toBase58()}.\n\n`)
 
@@ -40,75 +41,58 @@ const trader = async (secretKey: string, tradeDirection: TradeDirection, amount:
     const poolInfo = data.poolInfo
     const poolKeys = data.poolKeys
     const rpcData = data.rpcData
+
     if (poolInfo == null || rpcData == null) {
-        console.log("Pool datas ain't available")
+        console.log("Pool data's ain't available")
         return
     }
 
+    console.log("Checking Trade Direction ♿")
 
     if (tradeDirection === "BUY") {
-        swapResult = CurveCalculator.swapBaseOut({
-            poolMintA: poolInfo.mintA,
-            poolMintB: poolInfo.mintB,
-            tradeFeeRate: rpcData?.configInfo!.tradeFeeRate,
-            baseReserve: rpcData?.baseReserve,
-            quoteReserve: rpcData?.quoteReserve,
-            outputMint: MINT,
-            outputAmount: buyAmount,
-        })
+        baseIn = true
+        swapResult = CurveCalculator.swap(
+            buyAmount,
+            baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
+            baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
+            rpcData.configInfo!.tradeFeeRate
+        )
+
+
     } else {
-        swapResult = CurveCalculator.swapBaseOut({
-            poolMintA: poolInfo.mintA,
-            poolMintB: poolInfo.mintB,
-            tradeFeeRate: rpcData?.configInfo!.tradeFeeRate,
-            baseReserve: rpcData?.baseReserve,
-            quoteReserve: rpcData?.quoteReserve,
-            outputMint: WSOL,
-            outputAmount: buyAmount,
-        })
-
+        baseIn = false
+        swapResult = CurveCalculator.swap(
+            buyAmount,
+            baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
+            baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
+            rpcData.configInfo!.tradeFeeRate
+        )
     }
 
-    // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
-    try {
-        const txn = await raydium.cpmm.swap({
-            poolInfo,
-            poolKeys,
-            inputAmount: new BN(0), // if set fixedOut to true, this arguments won't be used
-            fixedOut: true,
-            swapResult: {
-                sourceAmountSwapped: swapResult.amountIn,
-                destinationAmountSwapped: buyAmount,
-            },
-            slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01% (know random slippage to use)
-            baseIn: false,
-            txVersion: TxVersion.V0,
-            //optional: set up priority fee here
-            computeBudgetConfig: {
-                units: 600000,
-                microLamports: 1000000,
-            },
-        })
+    
+    const { execute } = await raydium.cpmm.swap({
+        poolInfo,
+        poolKeys,
+        inputAmount: buyAmount,
+        swapResult,
+        slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01%
+        baseIn,
+        // optional: set up priority fee here
+        computeBudgetConfig: {
+            units: 600000,
+            microLamports: 10000000,
+        },
+    })
 
-        if (txn == null) {
-            console.log("Couldn't process transaction")
-            return
-        }
-
-        const { txId } = await txn.execute({ sendAndConfirm: true })
-        console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
-            txId: `https://solscan.io/tx/${txId}`,
-        })
-    } catch (e) {
-        console.log("can't process transaction", e)
-        process.exit(1)
-    }
+    // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute
+    const { txId } = await execute({ sendAndConfirm: true })
+    console.log(`swapped: txId: https://solscan.io/tx/${txId}`)
 }
 
 
 
 (async () => {
-    //trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "BUY", 0.01);
-    trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "SELL", "100000");
+    trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "BUY", 0.03);
+    //trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "SELL", 1_000_000);
 })();
 
