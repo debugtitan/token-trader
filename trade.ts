@@ -109,6 +109,6 @@ const trader = async (secretKey: string, tradeDirection: TradeDirection, amount:
 
 (async () => {
     //trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "BUY", 0.01);
-    trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "SELL", "10000000000000");
+    trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "SELL", "100000");
 })();
 
