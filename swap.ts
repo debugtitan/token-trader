@@ -34,10 +34,6 @@ class RaySwap {
     private MINT: PublicKey = new PublicKey("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR")
     private AMM_ID = "ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW"
     private WSOL: PublicKey = new PublicKey("So11111111111111111111111111111111111111112");
-    private ASSOCIATED_TOKEN_PROGRAM_ID: PublicKey = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-    // private poolInfo: ApiV3PoolInfoStandardItemCpmm
-    // private poolKeys: CpmmKeys | undefined
-    // private rpcData: CpmmRpcData
     allPoolKeysJson: any[] = [];
 
     constructor(secretKey: string) {
@@ -51,13 +47,14 @@ class RaySwap {
      * 
      * @returns {Promise<void>} A promise that resolves once the Raydium instance is successfully loaded.
      */
-    async init(): Promise<void> {
+    async init() {
         console.log(`🤖 Initiating bot for wallet: ${this.wallet.publicKey.toBase58()}.\n\n`)
-        this.raydium = await Raydium.load({
+        return this.raydium = await Raydium.load({
             connection: this.solanaConnection,
             owner: this.wallet,
             disableLoadToken: false
         });
+
     }
 
     /**get wallet token balance */
@@ -78,7 +75,7 @@ class RaySwap {
         console.log(`Wallet: ${this.wallet.publicKey}\nSOL: ${solBalance}\nTAKY: ${tokenBalance}\nSell Amount: ${sellAmount}`)
 
 
-        const outputAmount = new BN(1_000_000) //
+        const outputAmount = new BN(sellAmount)//
         const data = await this.raydium?.cpmm.getPoolInfoFromRpc(this.AMM_ID)
         if (data == null) {
             return
@@ -98,14 +95,14 @@ class RaySwap {
             outputMint: this.WSOL,
             outputAmount: outputAmount,
         })
-        console.log(swapResult)
-        const baseIn = this.MINT.toBase58() === poolInfo.mintB.address
-        console.log(baseIn, poolInfo.mintB)
+        console.log(new BN(swapResult.amountIn).toNumber() / 10 ** 9, new BN(swapResult.amountIn).toNumber())
 
+
+        // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
         const txn = await this.raydium?.cpmm.swap({
             poolInfo,
             poolKeys,
-            inputAmount: new BN(0), // if set fixedOut to true, this arguments won't be used
+            inputAmount: new BN(sellAmount), // if set fixedOut to true, this arguments won't be used
             fixedOut: true,
             swapResult: {
                 sourceAmountSwapped: swapResult.amountIn,
@@ -127,17 +124,14 @@ class RaySwap {
         try {
             const { txId } = await txn.execute({ sendAndConfirm: true })
             console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
-                txId: `https://explorer.solana.com/tx/${txId}`,
+                txId: `https://solscan.io/tx/${txId}`,
             })
+            return
         } catch (e) {
-            // console.log(JSON.stringify(e))
+            console.log(e)
+            process.exit()
         }
-
-
     }
-
-
-
 
 }
 

@@ -5,7 +5,8 @@
   "main": "swap.js",
   "license": "MIT",
   "scripts": {
-    "start": "npx ts-node ./swap.ts"
+    "start": "npx ts-node ./swap.ts",
+    "trade": "npx ts-node ./trade.ts"
   },
   "dependencies": {
     "@raydium-io/raydium-sdk-v2": "^0.1.67-alpha",
