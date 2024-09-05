@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "start": "npx ts-node ./swap.ts",
-    "trade": "npx ts-node ./trade.ts"
+    "trade": "npx ts-node ./trade.ts",
+    "app": "npx ts-node ./random-trader.ts"
   },
   "dependencies": {
     "@raydium-io/raydium-sdk-v2": "^0.1.67-alpha",
