@@ -43,7 +43,7 @@ class RandomTrader {
     allPoolKeysJson: any[] = [];
 
     constructor(secretKey: string) {
-        this.solanaConnection = new Connection(process.env.SOLANA_ENDPOINT ?? "https://api.mainnet-beta.solana.com");
+        this.solanaConnection = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
         this.wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
 
     }
@@ -77,7 +77,7 @@ class RandomTrader {
         if (raydium == null) {
             return
         }
-        const solBalance = await this.getBalance()
+        const solBalance = await this.getBalance() / 10 ** 9
         const tokenBalance = await this.getTokenBalance()
         const tradeAmount = direction === "BUY" ? getTradeAmount(solBalance) : getTradeAmount(tokenBalance)
         console.log(`Wallet: ${this.wallet.publicKey}\nSOL: ${solBalance}\nTAKY: ${tokenBalance}\n${direction} Amount: ${tradeAmount}`)
@@ -116,25 +116,30 @@ class RandomTrader {
             )
         }
 
+        if (tradeAmount < 0.01) {
+            console.log("amount less than 0.01", tradeAmount)
+            return true
+        }
+
         // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
-        const txn = await raydium.cpmm.swap({
+        const {execute} = await raydium.cpmm.swap({
             poolInfo,
             poolKeys,
             inputAmount: outputAmount,
             swapResult,
-            slippage: 0.001, // range: 1 ~ 0.0001, means 100% ~ 0.01%
+            slippage: 0.001, // range: 1skipPreflight: false,  ~ 0.0001, means 100% ~ 0.01%
             baseIn,
             // optional: set up priority fee here
             computeBudgetConfig: {
-                units: 600000,
-                microLamports: 10000000,
+                units: 6000000,
+                microLamports: 100000000,
             },
         })
 
-        if (txn == null) {
-            return
-        }
-        const { txId } = await txn.execute({ sendAndConfirm: true })
+       
+        const blockHash = await this.solanaConnection.getLatestBlockhashAndContext("finalized")
+        console.log(blockHash.value)
+        const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash,sendAndConfirm: false })
         console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
             txId: `https://solscan.io/tx/${txId}`,
         })

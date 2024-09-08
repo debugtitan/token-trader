@@ -17,7 +17,7 @@ const trader = async (secretKey: string, tradeDirection: TradeDirection, amount:
     const MINT = "8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"
     const AMM_ID = "ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW"
     const WSOL: PublicKey = new PublicKey("So11111111111111111111111111111111111111112");
-    const solanaConnection = new Connection(process.env.SOLANA_ENDPOINT ?? "https://api.mainnet-beta.solana.com");
+    const solanaConnection = new Connection("https://api.mainnet-beta.solana.com");
     const buyAmount = new BN(amount * 10 ** 9);
     const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
     console.log(`🤖 Initiating bot for wallet: ${wallet.publicKey.toBase58()}.\n\n`)
@@ -69,7 +69,7 @@ const trader = async (secretKey: string, tradeDirection: TradeDirection, amount:
         )
     }
 
-    
+
     const { execute } = await raydium.cpmm.swap({
         poolInfo,
         poolKeys,
@@ -82,17 +82,26 @@ const trader = async (secretKey: string, tradeDirection: TradeDirection, amount:
             units: 600000,
             microLamports: 10000000,
         },
+
     })
 
+    interface ExecuteParams {
+        skipPreflight?: boolean;
+        recentBlockHash?: string;
+        sendAndConfirm?: boolean;
+    }
+
     // don't want to wait confirm, set sendAndConfirm to false or don't pass any params to execute
-    const { txId } = await execute({ sendAndConfirm: true })
+    const blockHash = await solanaConnection.getLatestBlockhashAndContext("finalized")
+    console.log(blockHash.value)
+    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, skipPreflight: false, sendAndConfirm: false })
     console.log(`swapped: txId: https://solscan.io/tx/${txId}`)
 }
 
 
 
 (async () => {
-    trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "BUY", 0.03);
-    //trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "SELL", 1_000_000);
+    //trader("64pFmk4d15akGxsCVpsCkhEQC3Ut2AxGLmyuHrk4vLbz1gNJxnifgYiQab7Bfgj1j7v2PFTMeAU756wkm7iCFz5q", "BUY", 0.03);
+    trader("poTLaDCUzBf8m8z1DPx4BWnydaNPJjdnUDe7Kj2XBvuoAFU3nAUR6nxDiV2gKV4PzYtQn4RajdEh8vvPMKW6Vt2", "SELL", 6_000_000);
 })();
 
