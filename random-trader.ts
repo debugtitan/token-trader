@@ -122,7 +122,7 @@ class RandomTrader {
         }
 
         // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
-        const {execute} = await raydium.cpmm.swap({
+        const { execute } = await raydium.cpmm.swap({
             poolInfo,
             poolKeys,
             inputAmount: outputAmount,
@@ -136,10 +136,10 @@ class RandomTrader {
             },
         })
 
-       
+
         const blockHash = await this.solanaConnection.getLatestBlockhashAndContext("finalized")
         console.log(blockHash.value)
-        const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash,sendAndConfirm: false })
+        const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
         console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
             txId: `https://solscan.io/tx/${txId}`,
         })
@@ -152,36 +152,40 @@ class RandomTrader {
 
 
 (async () => {
-    let canTrade = true;
-
-    while (canTrade) {
-        const wallet = getRandomWallet();
-        const direction = getRandomTradeDirection();
-        const trader = new RandomTrader(wallet);
-
-        try {
-            const performTrade = await trader.main(direction);
-            console.log(`Trade has ended: ${performTrade}`);
-
-            if (performTrade) {
-                canTrade = true;
-            } else {
-                canTrade = false;
-            }
-        } catch (error) {
-            console.log(`Error during trade: ${error}`);
-            canTrade = false;
-        }
-
-        if (!canTrade) {
-            console.log('Waiting before next trade...');
-            await waitForNextTrade();
-            canTrade = true;
-        }
-    }
+    const tradeDirection = getRandomTradeDirection()
+    const wallets = fs.readFileSync("Wallets.txt", 'utf-8').split('\n').map(wallet => wallet.trim()).filter(wallet => wallet !== '');
+    console.log(`Trade Direction: ${tradeDirection}`, wallets)
 })();
 
 function waitForNextTrade(): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, 5000));
 }
 
+
+
+
+//while (canTrade) {
+//     const wallet = getRandomWallet();
+//     const direction = getRandomTradeDirection();
+//     const trader = new RandomTrader(wallet);
+
+//     // try {
+//     //     const performTrade = await trader.main(direction);
+//     //     console.log(`Trade has ended: ${performTrade}`);
+
+//     //     if (performTrade) {
+//     //         canTrade = true;
+//     //     } else {
+//     //         canTrade = false;
+//     //     }
+//     // } catch (error) {
+//     //     console.log(`Error during trade: ${error}`);
+//     //     canTrade = false;
+//     // }
+
+//     // if (!canTrade) {
+//     //     console.log('Waiting before next trade...');
+//     //     await waitForNextTrade();
+//     //     canTrade = true;
+//     // }
+// }
