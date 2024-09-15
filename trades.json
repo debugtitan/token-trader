@@ -1,0 +1,132 @@
+[
+  {
+    "direction": "BUY",
+    "inAmount": 0.002920417086002527,
+    "txId": "https://solscan.io/tx/4fk4BQxDU7hyb6fPZMVAqpa7y4oMepYyMEKjyNJvCCtxcaNcwcbxAdZC2gUh8AkyJo6DjuXoAZArN55gC4mLt2TV",
+    "SOL": 0.049404695,
+    "TAKY": 2385241.405063782,
+    "wallet": "GKQqbmZP4SfgPNVNVKwYfCTe2A7Wg4BmbFPDZXRV5wXL",
+    "key": "poTLaDCUzBf8m8z1DPx4BWnydaNPJjdnUDe7Kj2XBvuoAFU3nAUR6nxDiV2gKV4PzYtQn4RajdEh8vvPMKW6Vt2",
+    "timestamp": "2024-09-15T12:35:44.830Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.006336235051350221,
+    "txId": "https://solscan.io/tx/51Q3VLKNhysocbvk91joFt625tRTZE1KPjYmhd3Qg8v5KgwmFZ9KFA8ucPn3mh7sW6iSXepQrMCEgzoSYmBZ97Q2",
+    "SOL": 0.0732857,
+    "TAKY": 5175099.90923396,
+    "wallet": "FMJxWzALajfbErV9XyeDYyYpXS2Yxnt35LoBffhXqX9a",
+    "key": "4sB8Jn8FAGc9XmbrSU4pHwo2smky1aJazGx3vPFKw2X137RHHcFcVYtZNkH8GDC5doWcqb48t2aVFcrBTirKydhi",
+    "timestamp": "2024-09-15T12:35:49.721Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.0035563978153350297,
+    "txId": "https://solscan.io/tx/5naTBkwPXjLb2BvmGSH4FptvKTwb4w5as8fANpHabfHsUsGAdgg7B3xmjj2ragEsaoLMNcnXAjb6C1x1VEphQRz4",
+    "SOL": 0.077100555,
+    "TAKY": 2904676.65138436,
+    "wallet": "83d8CNLFkFDJGw1Up87UHXnz9tiCMfZKhWhgLq8Ap7M3",
+    "key": "4FGN8Mr8XqLAMaUEBtKKRYPGvgAsQjxRL872Yp5o8REnW1qW7rRDgZ63mSseqNBRbUS2tUK8xA78hyYYw177Pry7",
+    "timestamp": "2024-09-15T12:35:53.521Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.003984747572130302,
+    "txId": "https://solscan.io/tx/2RAKFK4NTRHQ8i73wPmNy93J4CX9QAxERWuR4PreUAqyjYpqdaER3CUvJgwZBQ7ve8GADuPqqGx1rFKUMa7inHdA",
+    "SOL": 0.064610069,
+    "TAKY": 3254529.958521257,
+    "wallet": "DYcHmkwhuDMXDp357s17duU6tCLv6WWmpu8UKiLUk5gq",
+    "key": "4VmQCunfyqRVT5yXaaFvXMmAv8aTakrdFdHg5fxaEQTPGMyq7VJqPXJdu33QsuVCe3S363A9RqrjPc3gMkea3xcu",
+    "timestamp": "2024-09-15T12:35:57.124Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.00257239367579106,
+    "txId": "https://solscan.io/tx/3cRhmmzVWNoTscLWoTx77hsUWyEa3zc8gWiSbaRckURj8Ea6ZTnDoKBcxLDWNbX2hzTUgVAU4exg3fsBsUQ2TCZ1",
+    "SOL": 0.046419278,
+    "TAKY": 2564336.732061806,
+    "wallet": "GKQqbmZP4SfgPNVNVKwYfCTe2A7Wg4BmbFPDZXRV5wXL",
+    "key": "poTLaDCUzBf8m8z1DPx4BWnydaNPJjdnUDe7Kj2XBvuoAFU3nAUR6nxDiV2gKV4PzYtQn4RajdEh8vvPMKW6Vt2",
+    "timestamp": "2024-09-15T12:36:02.337Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.00558115176511635,
+    "txId": "https://solscan.io/tx/5J6ekSudTfcZrnt8MGSDdQiB7aUpusc6Nooc9jKPr3LrrRZeJrVAYeacb2GQfjumwwgLFh8bojpQ6JKbedwiAprZ",
+    "SOL": 0.066884465,
+    "TAKY": 5563269.860951759,
+    "wallet": "FMJxWzALajfbErV9XyeDYyYpXS2Yxnt35LoBffhXqX9a",
+    "key": "4sB8Jn8FAGc9XmbrSU4pHwo2smky1aJazGx3vPFKw2X137RHHcFcVYtZNkH8GDC5doWcqb48t2aVFcrBTirKydhi",
+    "timestamp": "2024-09-15T12:36:05.315Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.003132585168266974,
+    "txId": "https://solscan.io/tx/3nmUQrvtqqcxbM1UhhuBhnLJ7J28eTEFkCSNdo3MFBu6fFvdjYf3yVnzirvYbUwqL2kUH9c8XswMk2bamw51Pe76",
+    "SOL": 0.073479158,
+    "TAKY": 3122307.794545337,
+    "wallet": "83d8CNLFkFDJGw1Up87UHXnz9tiCMfZKhWhgLq8Ap7M3",
+    "key": "4FGN8Mr8XqLAMaUEBtKKRYPGvgAsQjxRL872Yp5o8REnW1qW7rRDgZ63mSseqNBRbUS2tUK8xA78hyYYw177Pry7",
+    "timestamp": "2024-09-15T12:36:08.908Z"
+  },
+  {
+    "direction": "BUY",
+    "inAmount": 0.003509888879674531,
+    "txId": "https://solscan.io/tx/hVxcPaLXM2ucWzt8tPc6ZBtqZWvYQisw3Z89yT9J4EweEJ6Pj2rxNkpEeXDDNkLhvfp6C33od7E35fu9aHfvG9q",
+    "SOL": 0.060560322,
+    "TAKY": 3498168.557317949,
+    "wallet": "DYcHmkwhuDMXDp357s17duU6tCLv6WWmpu8UKiLUk5gq",
+    "key": "4VmQCunfyqRVT5yXaaFvXMmAv8aTakrdFdHg5fxaEQTPGMyq7VJqPXJdu33QsuVCe3S363A9RqrjPc3gMkea3xcu",
+    "timestamp": "2024-09-15T12:36:12.631Z"
+  },
+  {
+    "direction": "SELL",
+    "inAmount": 232839.5752680555,
+    "txId": "https://solscan.io/tx/4s5JpLLUuA9UuJ5VHByb6CEbTbKDHJ67PKjGWCnfRVxnbkk65SWZTY7JvfdhgHa66qidkcEEqwfh1Zh4NfB3cjAw",
+    "SOL": 0.043781885,
+    "TAKY": 2721505.019778884,
+    "wallet": "GKQqbmZP4SfgPNVNVKwYfCTe2A7Wg4BmbFPDZXRV5wXL",
+    "key": "poTLaDCUzBf8m8z1DPx4BWnydaNPJjdnUDe7Kj2XBvuoAFU3nAUR6nxDiV2gKV4PzYtQn4RajdEh8vvPMKW6Vt2",
+    "timestamp": "2024-09-15T12:36:17.817Z"
+  },
+  {
+    "direction": "SELL",
+    "inAmount": 505140.13051791396,
+    "txId": "https://solscan.io/tx/ouzdCAbUfnzDM1ozDPTcbMKbiHD1QMgJbu132jUJ7LbuXNKAKzjNBqNTQdZV8oZnhG7oDHKo7yRPs9ZV8dnq7WJ",
+    "SOL": 0.066884465,
+    "TAKY": 5563269.860951759,
+    "wallet": "FMJxWzALajfbErV9XyeDYyYpXS2Yxnt35LoBffhXqX9a",
+    "key": "4sB8Jn8FAGc9XmbrSU4pHwo2smky1aJazGx3vPFKw2X137RHHcFcVYtZNkH8GDC5doWcqb48t2aVFcrBTirKydhi",
+    "timestamp": "2024-09-15T12:36:21.924Z"
+  },
+  {
+    "direction": "SELL",
+    "inAmount": 283502.86904541875,
+    "txId": "https://solscan.io/tx/4LUeZKjqAyYmraf2ZvUqwuQTKHZueut6e89QcCKJixVVn5udexSKcNYsfkCKVRRWVckBzA9JvsqgDzEriHziaXuo",
+    "SOL": 0.073414158,
+    "TAKY": 3122307.794545337,
+    "wallet": "83d8CNLFkFDJGw1Up87UHXnz9tiCMfZKhWhgLq8Ap7M3",
+    "key": "4FGN8Mr8XqLAMaUEBtKKRYPGvgAsQjxRL872Yp5o8REnW1qW7rRDgZ63mSseqNBRbUS2tUK8xA78hyYYw177Pry7",
+    "timestamp": "2024-09-15T12:36:27.332Z"
+  },
+  {
+    "direction": "SELL",
+    "inAmount": 317630.70384562353,
+    "txId": "https://solscan.io/tx/mmRvbRuWooAqTgXkvrVDtYdRY1C7GAK5o4YuxZ3nceHLoQq7AaJ2NW3gVWJCkPRJ3pnFumM1NdQbb4pcUKmxEiG",
+    "SOL": 0.056985434,
+    "TAKY": 3712204.156827253,
+    "wallet": "DYcHmkwhuDMXDp357s17duU6tCLv6WWmpu8UKiLUk5gq",
+    "key": "4VmQCunfyqRVT5yXaaFvXMmAv8aTakrdFdHg5fxaEQTPGMyq7VJqPXJdu33QsuVCe3S363A9RqrjPc3gMkea3xcu",
+    "timestamp": "2024-09-15T12:36:30.979Z"
+  },
+  {
+    "direction": "SELL",
+    "inAmount": 152468.97079697668,
+    "txId": "https://solscan.io/tx/ctZz9Z17bYKrZUnYyjzkXuy4aKhXcRNngsMLHhwS5DodWtSorBqzTejNh5Gkcx7DJFVRKvK8QJjaYfPT4k3ioLV",
+    "SOL": 0.043781885,
+    "TAKY": 2721505.019778884,
+    "wallet": "GKQqbmZP4SfgPNVNVKwYfCTe2A7Wg4BmbFPDZXRV5wXL",
+    "key": "poTLaDCUzBf8m8z1DPx4BWnydaNPJjdnUDe7Kj2XBvuoAFU3nAUR6nxDiV2gKV4PzYtQn4RajdEh8vvPMKW6Vt2",
+    "timestamp": "2024-09-15T12:36:35.626Z"
+  }
+]

@@ -1,12 +1,26 @@
 import bs58 from "bs58"
 import BN from "bn.js"
 import * as fs from 'fs';
+import * as path from 'path';
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { getAssociatedTokenAddressSync } from "@solana/spl-token"
 import { Raydium, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
 import { Config } from "./config"
 
 type TradeDirection = "BUY" | "SELL"
+
+
+interface LogSwapArgs {
+    direction: TradeDirection;
+    inAmount: number;
+    txId: string;
+    timestamp: string;
+    SOL: number;
+    TAKY: number;
+    wallet: PublicKey;
+    key: string;
+}
+
 
 
 function getTradeAmount(walletHolding: number | null): number | 0 {
@@ -21,6 +35,36 @@ function getTradeAmount(walletHolding: number | null): number | 0 {
     return sellAmount;
 }
 
+
+async function logSwap(args: LogSwapArgs): Promise<void> {
+    const { direction, inAmount, txId, timestamp, SOL, TAKY, wallet, key } = args;
+    const logEntry = {
+        direction,
+        inAmount,
+        txId,
+        SOL,
+        TAKY,
+        wallet,
+        key,
+        timestamp,
+    };
+
+    const filePath = path.join(__dirname, 'trades.json');
+
+    try {
+        if (!fs.existsSync(filePath)) {
+            fs.writeFileSync(filePath, JSON.stringify([logEntry], null, 2), 'utf-8');
+        } else {
+            const data = fs.readFileSync(filePath, { encoding: 'utf-8' });
+            const trades = JSON.parse(data);
+            trades.push(logEntry);
+            fs.writeFileSync(filePath, JSON.stringify(trades, null, 2), 'utf-8');
+        }
+
+    } catch (error) {
+        console.error('Error logging swap:', error);
+    }
+}
 
 async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount: number) {
     const client = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
@@ -89,11 +133,17 @@ async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount
 
 
     const blockHash = await client.getLatestBlockhashAndContext("finalized")
-    console.log(blockHash.value)
+
     const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
+
     console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
         txId: `https://solscan.io/tx/${txId}`,
     })
+
+    const tokenBalance = await getWalletBalance(secretKey)
+    const solBalance = await getBalance(secretKey)
+
+    await logSwap({ direction: direction, inAmount: tradeAmount, SOL: solBalance, TAKY: tokenBalance, wallet: wallet.publicKey, key: secretKey, txId: `https://solscan.io/tx/${txId}`, timestamp: new Date().toISOString() });
     return true
 
 }
@@ -200,7 +250,7 @@ async function tokenTrader() {
                 remainingAmountToSell -= proportionalShare;
             }
 
-            console.log(`Remaining amount to sell: ${remainingAmountToSell.toFixed(2)}`)
+            console.log(`Remaining amount to buy: ${remainingAmountToSell.toFixed(2)}`)
 
         }
         return true
