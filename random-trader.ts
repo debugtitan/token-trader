@@ -205,8 +205,48 @@ async function tokenTrader() {
         }
         return true
 
-    }
+    } else if (tradeDirection === "BUY" && holdingPercentage > Config.sellPercentage) {
+        //get our buy percentage
+        const tokenHoldingToBuy = getTradeAmount(allSolBalances)
+        const percentageSell = (tokenHoldingToBuy / allSolBalances) * 100
 
+        console.log("Amount to buy", tokenHoldingToBuy.toLocaleString(), "\nPercentage (%):", percentageSell.toFixed(2))
+
+
+        //use this here to keep track of amount to buy
+        let remainingAmountToBuy = tokenHoldingToBuy;
+
+        //logic checking each wallet has tokens to perfom transaction
+        for (let i = 0; i < wallets.length && remainingAmountToBuy > 0; i++) {
+            const walletBalance = balances[i];
+            const walletAddress = wallets[i];
+
+            if (walletBalance === 0) {
+                console.log(`Wallet ${walletAddress} has 0 tokens, skipping.`);
+                continue;
+            }
+
+            // distribute tokens to all wallets
+            /**you can't distribute equally, some might be empty so need to share base on (%) */
+            const proportionalShare = (walletBalance / allWalletBalances) * tokenHoldingToBuy;
+
+
+            if (walletBalance < proportionalShare) {
+                //sell all tokens from this wallet
+                await makeSwap(tradeDirection, walletAddress, proportionalShare)
+                remainingAmountToBuy -= walletBalance;
+            } else {
+                // wallet has all proportion shared to them
+                await makeSwap(tradeDirection, walletAddress, proportionalShare)
+                remainingAmountToBuy -= proportionalShare;
+            }
+
+            console.log(`Remaining amount to sell: ${remainingAmountToBuy.toFixed(2)}`)
+
+        }
+        return true
+
+    }
 
 }
 
