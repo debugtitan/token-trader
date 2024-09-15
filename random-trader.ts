@@ -5,6 +5,7 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { getAssociatedTokenAddressSync } from "@solana/spl-token"
 import { Raydium, TxVersion, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
 import dotenv from "dotenv";
+import { Config } from "./config"
 
 dotenv.config({
     path: ".env",
@@ -13,148 +14,201 @@ dotenv.config({
 type TradeDirection = "BUY" | "SELL"
 
 
-function getRandomWallet(filePath: string = "Wallets.txt"): string {
-    const data = fs.readFileSync(filePath, 'utf-8');
-    const keys = data.split(/\r?\n/).filter(key => key.trim() !== '');
-    const randomIndex = Math.floor(Math.random() * keys.length);
-    return keys[randomIndex];
-}
-
 function getTradeAmount(walletHolding: number | null): number | 0 {
     if (walletHolding === null) {
         return 0;
     }
-    const percentageToSell = Math.random() * (10 - 2) + 2; // random 2-10%
+
+    const minPercentage = Math.min(Config.randomTrade1, Config.randomTrade2);
+    const maxPercentage = Math.max(Config.randomTrade1, Config.randomTrade2);
+    const percentageToSell = Math.random() * (maxPercentage - minPercentage) + minPercentage;
     const sellAmount = (percentageToSell / 100) * walletHolding;
     return sellAmount;
 }
 
+
+async function sell(direction: TradeDirection, secretKey: string, swapAmount: number) {
+    const client = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
+
+    const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
+    const tradeAmount = swapAmount
+    const raydium = await Raydium.load({
+        connection: client,
+        owner: wallet,
+        disableLoadToken: false
+    });
+    let swapResult;
+    let baseIn: boolean;
+
+    if (raydium == null) {
+        return
+    }
+
+    const outputAmount = new BN(tradeAmount * 10 ** 9)//
+    const data = await raydium.cpmm.getPoolInfoFromRpc(Config.AMM_ID)
+    if (data == null) {
+        return
+    }
+    const poolInfo = data.poolInfo
+    const poolKeys = data.poolKeys
+    const rpcData = data.rpcData
+
+    if (poolInfo == null || rpcData == null) {
+        return
+    }
+
+    if (direction === "BUY") {
+        baseIn = true
+        swapResult = CurveCalculator.swap(
+            outputAmount,
+            baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
+            baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
+            rpcData.configInfo!.tradeFeeRate
+        )
+
+
+    } else {
+        baseIn = false
+        swapResult = CurveCalculator.swap(
+            outputAmount,
+            baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
+            baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
+            rpcData.configInfo!.tradeFeeRate
+        )
+    }
+
+    // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
+    const { execute } = await raydium.cpmm.swap({
+        poolInfo,
+        poolKeys,
+        inputAmount: outputAmount,
+        swapResult,
+        slippage: 0.001, // range: 1skipPreflight: false,  ~ 0.0001, means 100% ~ 0.01%
+        baseIn,
+        // optional: set up priority fee here
+        computeBudgetConfig: {
+            units: 60000,
+            microLamports: 1000000,
+        },
+    })
+
+
+    const blockHash = await this.solanaConnection.getLatestBlockhashAndContext("finalized")
+    console.log(blockHash.value)
+    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
+    console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
+        txId: `https://solscan.io/tx/${txId}`,
+    })
+    return true
+
+}
+
+
 function getRandomTradeDirection(): TradeDirection {
+    //return "SELL"
     return Math.floor(Math.random() * 2) === 0 ? "BUY" : "SELL";
 }
 
-class RandomTrader {
-    private solanaConnection: Connection;
-    private wallet: Keypair;
-    private raydium: Raydium | null = null;
-    private MINT: PublicKey = new PublicKey("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR")
-    private AMM_ID = "ATDyH3UarK8wEbjwKwzFgzvNsw7UCC2uaTWFaEHZAxLW"
-    private WSOL: PublicKey = new PublicKey("So11111111111111111111111111111111111111112");
-    allPoolKeysJson: any[] = [];
-
-    constructor(secretKey: string) {
-        this.solanaConnection = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
-        this.wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
-
+async function getWalletBalance(secretKey: string): Promise<number> {
+    const trader = new RandomTrader(secretKey);
+    try {
+        return await trader.getTokenBalance() || 0;
+    } catch (error) {
+        return 0;
     }
+};
 
-    /**
-     * Initializes the Raydium instance by loading necessary data.
-     * 
-     * @returns {Promise<void>} A promise that resolves once the Raydium instance is successfully loaded.
-     */
+async function getBalance(secretKey: string): Promise<number> {
+    const trader = new RandomTrader(secretKey);
+    return await trader.getBalance() / 10 ** 9
+}
 
-    /**get wallet token balance */
-    async getTokenBalance() {
-        const associateTokenAccount = getAssociatedTokenAddressSync(this.MINT, this.wallet.publicKey);
-        return (await this.solanaConnection.getTokenAccountBalance(associateTokenAccount)).value.uiAmount
-    }
-
-    /** get wallet solana balance */
-    async getBalance() {
-        return await this.solanaConnection.getBalance(this.wallet.publicKey)
-    }
-
-    async main(direction: TradeDirection) {
-        const raydium = await Raydium.load({
-            connection: this.solanaConnection,
-            owner: this.wallet,
-            disableLoadToken: false
-        });
-        let swapResult;
-        let baseIn: boolean;
-
-        if (raydium == null) {
-            return
-        }
-        const solBalance = await this.getBalance() / 10 ** 9
-        const tokenBalance = await this.getTokenBalance()
-        const tradeAmount = direction === "BUY" ? getTradeAmount(solBalance) : getTradeAmount(tokenBalance)
-        console.log(`Wallet: ${this.wallet.publicKey}\nSOL: ${solBalance}\nTAKY: ${tokenBalance}\n${direction} Amount: ${tradeAmount}`)
-
-
-        const outputAmount = new BN(tradeAmount * 10 ** 9)//
-        const data = await raydium.cpmm.getPoolInfoFromRpc(this.AMM_ID)
-        if (data == null) {
-            return
-        }
-        const poolInfo = data.poolInfo
-        const poolKeys = data.poolKeys
-        const rpcData = data.rpcData
-
-        if (poolInfo == null || rpcData == null) {
-            return
-        }
-
-        if (direction === "BUY") {
-            baseIn = true
-            swapResult = CurveCalculator.swap(
-                outputAmount,
-                baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
-                baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
-                rpcData.configInfo!.tradeFeeRate
-            )
-
-
-        } else {
-            baseIn = false
-            swapResult = CurveCalculator.swap(
-                outputAmount,
-                baseIn ? rpcData.baseReserve : rpcData.quoteReserve,
-                baseIn ? rpcData.quoteReserve : rpcData.baseReserve,
-                rpcData.configInfo!.tradeFeeRate
-            )
-        }
-
-        if (tradeAmount < 0.01) {
-            console.log("amount less than 0.01", tradeAmount)
-            return true
-        }
-
-        // ALWAYS NOTE ACTUAL AMOUNT MIGHT NOT BE SOLD "PRICE IMPACT, HIGH VOTALITY, LOW LIQUIDITY"
-        const { execute } = await raydium.cpmm.swap({
-            poolInfo,
-            poolKeys,
-            inputAmount: outputAmount,
-            swapResult,
-            slippage: 0.001, // range: 1skipPreflight: false,  ~ 0.0001, means 100% ~ 0.01%
-            baseIn,
-            // optional: set up priority fee here
-            computeBudgetConfig: {
-                units: 6000000,
-                microLamports: 100000000,
-            },
-        })
-
-
-        const blockHash = await this.solanaConnection.getLatestBlockhashAndContext("finalized")
-        console.log(blockHash.value)
-        const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
-        console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
-            txId: `https://solscan.io/tx/${txId}`,
-        })
-        return true
-
-    }
+const getTotalSupply = async () => {
+    const connection = new Connection('https://api.mainnet-beta.solana.com')
+    return await connection.getTokenSupply(new PublicKey("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"))
 
 }
 
-
-
 (async () => {
     const tradeDirection = getRandomTradeDirection()
+
+    // wallets
     const wallets = fs.readFileSync("Wallets.txt", 'utf-8').split('\n').map(wallet => wallet.trim()).filter(wallet => wallet !== '');
-    console.log(`Trade Direction: ${tradeDirection}`, wallets)
+
+    console.log(`\nTrade Direction: ${tradeDirection}`)
+
+    //fetch all wallet balance
+    const balances = await Promise.all(wallets.map(secretKey => getWalletBalance(secretKey)));
+
+    // total balance 
+    const allWalletBalances: number = balances.reduce((accumulator, currentValue) => {
+        return accumulator + currentValue
+    }, 0);
+
+    //SOL balances
+    const solBalances = await Promise.all(wallets.map(secretKey => getBalance(secretKey)));
+
+    //total sol balance
+    const allSolBalances = solBalances.reduce((accumulator, currentValue) => {
+        return accumulator + currentValue
+    }, 0);
+
+
+    //fetch token supply
+    const tokenSupply = (await getTotalSupply()).value.uiAmount ?? 0
+
+    //wallet percentage value
+    const holdingPercentage = (allWalletBalances / tokenSupply) * 100;
+
+    console.log(`Token Supply ${tokenSupply?.toLocaleString()}\n\nHoldings:${holdingPercentage.toFixed(2)}(%)\n\nBalances ${allWalletBalances.toLocaleString()}\n\nSOL: ${allSolBalances}\n`)
+
+    let tradeAmount: number;
+
+    // if direction is buy then continue
+    if (tradeDirection === "SELL" && holdingPercentage > Config.sellPercentage) {
+        //get our sell percentage
+        const tokenHoldingToSell = getTradeAmount(allWalletBalances)
+        const percentageSell = (tokenHoldingToSell / allWalletBalances) * 100
+        console.log("Amount to sell", tokenHoldingToSell.toLocaleString(), "\nPercentage (%):", percentageSell.toFixed(2))
+
+
+        //use this here to keep track of amount sold
+        let remainingAmountToSell = tokenHoldingToSell;
+
+        //logic checking each wallet has tokens to perfom transaction
+        for (let i = 0; i < wallets.length && remainingAmountToSell > 0; i++) {
+            const walletBalance = balances[i];
+            const walletAddress = wallets[i];
+
+            if (walletBalance === 0) {
+                console.log(`Wallet ${walletAddress} has 0 tokens, skipping.`);
+                continue;
+            }
+
+            // distribute tokens to all wallets
+            /**you can't distribute equally, some might be empty so need to share base on (%) */
+            const proportionalShare = (walletBalance / allWalletBalances) * tokenHoldingToSell;
+
+
+            if (walletBalance < proportionalShare) {
+                console.log(`Selling all tokens (${walletBalance}) from wallet ${walletAddress}`);
+                //await sellTokens(walletAddress, walletBalance);  // Sell all tokens from this wallet
+                remainingAmountToSell -= walletBalance;
+            } else {
+                // Case 2: Wallet has enough tokens to fulfill its proportional share
+                console.log(`Selling proportional share (${proportionalShare}) from wallet ${walletAddress}`);
+                //await sellTokens(walletAddress, proportionalShare);  // Sell the proportional share
+                remainingAmountToSell -= proportionalShare;
+            }
+
+            console.log(`Remaining amount to sell: ${remainingAmountToSell.toFixed(2)}`)
+
+        }
+        console.log(`Sell Processed: ${remainingAmountToSell}`);
+
+    }
+
+
 })();
 
 function waitForNextTrade(): Promise<void> {
