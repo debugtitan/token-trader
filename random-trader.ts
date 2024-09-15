@@ -3,13 +3,8 @@ import BN from "bn.js"
 import * as fs from 'fs';
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { getAssociatedTokenAddressSync } from "@solana/spl-token"
-import { Raydium, TxVersion, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
-import dotenv from "dotenv";
+import { Raydium, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
 import { Config } from "./config"
-
-dotenv.config({
-    path: ".env",
-});
 
 type TradeDirection = "BUY" | "SELL"
 
@@ -27,7 +22,7 @@ function getTradeAmount(walletHolding: number | null): number | 0 {
 }
 
 
-async function sell(direction: TradeDirection, secretKey: string, swapAmount: number) {
+async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount: number) {
     const client = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
 
     const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
@@ -93,7 +88,7 @@ async function sell(direction: TradeDirection, secretKey: string, swapAmount: nu
     })
 
 
-    const blockHash = await this.solanaConnection.getLatestBlockhashAndContext("finalized")
+    const blockHash = await client.getLatestBlockhashAndContext("finalized")
     console.log(blockHash.value)
     const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
     console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
@@ -110,17 +105,21 @@ function getRandomTradeDirection(): TradeDirection {
 }
 
 async function getWalletBalance(secretKey: string): Promise<number> {
-    const trader = new RandomTrader(secretKey);
+    const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
+    const connection = new Connection('https://api.mainnet-beta.solana.com')
+    const associateTokenAccount = getAssociatedTokenAddressSync(Config.MINT, wallet.publicKey);
+
     try {
-        return await trader.getTokenBalance() || 0;
+        return (await connection.getTokenAccountBalance(associateTokenAccount)).value.uiAmount || 0;
     } catch (error) {
         return 0;
     }
 };
 
 async function getBalance(secretKey: string): Promise<number> {
-    const trader = new RandomTrader(secretKey);
-    return await trader.getBalance() / 10 ** 9
+    const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
+    const connection = new Connection('https://api.mainnet-beta.solana.com')
+    return await connection.getBalance(wallet.publicKey) / 10 ** 9 || 0
 }
 
 const getTotalSupply = async () => {
@@ -129,7 +128,7 @@ const getTotalSupply = async () => {
 
 }
 
-(async () => {
+async function tokenTrader() {
     const tradeDirection = getRandomTradeDirection()
 
     // wallets
@@ -169,6 +168,7 @@ const getTotalSupply = async () => {
         //get our sell percentage
         const tokenHoldingToSell = getTradeAmount(allWalletBalances)
         const percentageSell = (tokenHoldingToSell / allWalletBalances) * 100
+
         console.log("Amount to sell", tokenHoldingToSell.toLocaleString(), "\nPercentage (%):", percentageSell.toFixed(2))
 
 
@@ -191,55 +191,52 @@ const getTotalSupply = async () => {
 
 
             if (walletBalance < proportionalShare) {
-                console.log(`Selling all tokens (${walletBalance}) from wallet ${walletAddress}`);
-                //await sellTokens(walletAddress, walletBalance);  // Sell all tokens from this wallet
+                //sell all tokens from this wallet
+                await makeSwap(tradeDirection, walletAddress, proportionalShare)
                 remainingAmountToSell -= walletBalance;
             } else {
-                // Case 2: Wallet has enough tokens to fulfill its proportional share
-                console.log(`Selling proportional share (${proportionalShare}) from wallet ${walletAddress}`);
-                //await sellTokens(walletAddress, proportionalShare);  // Sell the proportional share
+                // wallet has all proportion shared to them
+                await makeSwap(tradeDirection, walletAddress, proportionalShare)
                 remainingAmountToSell -= proportionalShare;
             }
 
             console.log(`Remaining amount to sell: ${remainingAmountToSell.toFixed(2)}`)
 
         }
-        console.log(`Sell Processed: ${remainingAmountToSell}`);
+        return true
 
     }
 
 
-})();
-
-function waitForNextTrade(): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, 5000));
 }
 
+function waitForNextTrade(): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, 200000)); //20 secs
+}
 
+(async () => {
+    let canTrade = true;
 
+    while (canTrade) {
 
-//while (canTrade) {
-//     const wallet = getRandomWallet();
-//     const direction = getRandomTradeDirection();
-//     const trader = new RandomTrader(wallet);
+        try {
+            const performTrade = await tokenTrader();
+            console.log(`Trade has ended: ${performTrade}`);
 
-//     // try {
-//     //     const performTrade = await trader.main(direction);
-//     //     console.log(`Trade has ended: ${performTrade}`);
+            if (performTrade) {
+                canTrade = true;
+            } else {
+                canTrade = false;
+            }
+        } catch (error) {
+            console.log(`Error during trade: ${error}`);
+            canTrade = false;
+        }
 
-//     //     if (performTrade) {
-//     //         canTrade = true;
-//     //     } else {
-//     //         canTrade = false;
-//     //     }
-//     // } catch (error) {
-//     //     console.log(`Error during trade: ${error}`);
-//     //     canTrade = false;
-//     // }
-
-//     // if (!canTrade) {
-//     //     console.log('Waiting before next trade...');
-//     //     await waitForNextTrade();
-//     //     canTrade = true;
-//     // }
-// }
+        if (!canTrade) {
+            console.log('Waiting before next trade...');
+            await waitForNextTrade();
+            canTrade = true;
+        }
+    }
+})();
