@@ -2,6 +2,7 @@ import bs58 from "bs58"
 import BN from "bn.js"
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
 import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { getAssociatedTokenAddressSync } from "@solana/spl-token"
 import { Raydium, CurveCalculator } from "@raydium-io/raydium-sdk-v2"
@@ -9,18 +10,31 @@ import { Config } from "./config"
 
 type TradeDirection = "BUY" | "SELL"
 
-
-interface LogSwapArgs {
-    direction: TradeDirection;
-    inAmount: number;
-    txId: string;
-    timestamp: string;
-    SOL: number;
-    TAKY: number;
-    wallet: PublicKey;
-    key: string;
+interface WalletData {
+    walletAddress: string;
+    privateKey: string;
+    solBalance: number;
+    tokenBal: number;
 }
 
+interface Wallet {
+    privateKey: string;
+    solBalance: number;
+    tokenBal: number;
+}
+
+
+interface Wallets {
+    [walletAddress: string]: Wallet;
+}
+
+interface WalletsYaml {
+    [key: string]: {
+        privateKey: string;
+        solBalance: number;
+        tokenBal: number;
+    };
+}
 
 
 function getTradeAmount(walletHolding: number | null): number | 0 {
@@ -35,38 +49,7 @@ function getTradeAmount(walletHolding: number | null): number | 0 {
     return sellAmount;
 }
 
-
-async function logSwap(args: LogSwapArgs): Promise<void> {
-    const { direction, inAmount, txId, timestamp, SOL, TAKY, wallet, key } = args;
-    const logEntry = {
-        direction,
-        inAmount,
-        txId,
-        SOL,
-        TAKY,
-        wallet,
-        key,
-        timestamp,
-    };
-
-    const filePath = path.join(__dirname, 'trades.json');
-
-    try {
-        if (!fs.existsSync(filePath)) {
-            fs.writeFileSync(filePath, JSON.stringify([logEntry], null, 2), 'utf-8');
-        } else {
-            const data = fs.readFileSync(filePath, { encoding: 'utf-8' });
-            const trades = JSON.parse(data);
-            trades.push(logEntry);
-            fs.writeFileSync(filePath, JSON.stringify(trades, null, 2), 'utf-8');
-        }
-
-    } catch (error) {
-        console.error('Error logging swap:', error);
-    }
-}
-
-async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount: number) {
+async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount: number): Promise<boolean> {
     const client = new Connection("https://aged-skilled-aura.solana-mainnet.quiknode.pro/f3204506cd69556a1bd269333d423d4978204581");
 
     const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
@@ -80,20 +63,20 @@ async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount
     let baseIn: boolean;
 
     if (raydium == null) {
-        return
+        return false
     }
 
     const outputAmount = new BN(tradeAmount * 10 ** 9)//
     const data = await raydium.cpmm.getPoolInfoFromRpc(Config.AMM_ID)
     if (data == null) {
-        return
+        return false
     }
     const poolInfo = data.poolInfo
     const poolKeys = data.poolKeys
     const rpcData = data.rpcData
 
     if (poolInfo == null || rpcData == null) {
-        return
+        return false
     }
 
     if (direction === "BUY") {
@@ -134,17 +117,13 @@ async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount
 
     const blockHash = await client.getLatestBlockhashAndContext("finalized")
 
-    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
+    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: true })
 
-    console.log(`swapped: ${poolInfo.mintA.symbol} to ${poolInfo.mintB.symbol}:`, {
-        txId: `https://solscan.io/tx/${txId}`,
-    })
-
-    const tokenBalance = await getWalletBalance(secretKey)
-    const solBalance = await getBalance(secretKey)
-
-    await logSwap({ direction: direction, inAmount: tradeAmount, SOL: solBalance, TAKY: tokenBalance, wallet: wallet.publicKey, key: secretKey, txId: `https://solscan.io/tx/${txId}`, timestamp: new Date().toISOString() });
-    return true
+    console.log(`https://solscan.io/tx/${txId}`)
+    if (txId) {
+        return true;
+    }
+    return false;
 
 }
 
@@ -172,139 +151,192 @@ async function getBalance(secretKey: string): Promise<number> {
     return await connection.getBalance(wallet.publicKey) / 10 ** 9 || 0
 }
 
-const getTotalSupply = async () => {
-    const connection = new Connection('https://api.mainnet-beta.solana.com')
-    return await connection.getTokenSupply(new PublicKey("8Eewax7ooBdi5nwkp7VwittjEV9mVWAGhN1KVRJroeMR"))
 
+function loadWallets(): Wallets {
+    const fileContents = fs.readFileSync('wallets.yaml', 'utf8');
+    return yaml.load(fileContents) as Wallets;;
 }
 
 async function tokenTrader() {
-    const tradeDirection = getRandomTradeDirection()
+    const tradeDirection = getRandomTradeDirection();
 
-    // wallets
-    const wallets = fs.readFileSync("Wallets.txt", 'utf-8').split('\n').map(wallet => wallet.trim()).filter(wallet => wallet !== '');
+    // Fetch all wallet data
+    const wallets = loadWallets();
 
-    console.log(`\nTrade Direction: ${tradeDirection}`)
+    // Calculate total token balances and SOL balances
+    const allTokenBalances = Object.values(wallets).reduce((accumulator, wallet) => accumulator + wallet.tokenBal, 0);
+    const allSolBalances = Object.values(wallets).reduce((accumulator, wallet) => accumulator + wallet.solBalance, 0);
 
-    //fetch all wallet balance
-    const balances = await Promise.all(wallets.map(secretKey => getWalletBalance(secretKey)));
+    console.log(`Total SOL Balance: ${allSolBalances}`);
+    console.log(`Total Token Balance: ${allTokenBalances}`);
 
-    // total balance 
-    const allWalletBalances: number = balances.reduce((accumulator, currentValue) => {
-        return accumulator + currentValue
-    }, 0);
+    // Fetch token supply
+    const tokenSupply = Config.TOKEN_SUPPLY; // Ensure Config.TOKEN_SUPPLY is defined
 
-    //SOL balances
-    const solBalances = await Promise.all(wallets.map(secretKey => getBalance(secretKey)));
+    // Calculate wallet holding percentage
+    const holdingPercentage = (allTokenBalances / tokenSupply) * 100;
 
-    //total sol balance
-    const allSolBalances = solBalances.reduce((accumulator, currentValue) => {
-        return accumulator + currentValue
-    }, 0);
+    console.log(`Holdings: ${holdingPercentage.toFixed(2)}%`);
 
 
-    //fetch token supply
-    const tokenSupply = (await getTotalSupply()).value.uiAmount ?? 0
-
-    //wallet percentage value
-    const holdingPercentage = (allWalletBalances / tokenSupply) * 100;
-
-    console.log(`Token Supply ${tokenSupply?.toLocaleString()}\n\nHoldings:${holdingPercentage.toFixed(2)}(%)\n\nBalances ${allWalletBalances.toLocaleString()}\n\nSOL: ${allSolBalances}\n`)
-
-    let tradeAmount: number;
-
-    // if direction is buy then continue
     if (tradeDirection === "SELL" && holdingPercentage > Config.sellPercentage) {
-        //get our sell percentage
-        const tokenHoldingToSell = getTradeAmount(allWalletBalances)
-        const percentageSell = (tokenHoldingToSell / allWalletBalances) * 100
+        const tokenHoldingToSell = getTradeAmount(allTokenBalances);
+        const percentageSell = (tokenHoldingToSell / allTokenBalances) * 100;
 
-        console.log("Amount to sell", tokenHoldingToSell.toLocaleString(), "\nPercentage (%):", percentageSell.toFixed(2))
+        console.log(`Amount to Sell: ${tokenHoldingToSell.toLocaleString()}`);
+        console.log(`Percentage (%): ${percentageSell.toFixed(2)}`);
 
-
-        //use this here to keep track of amount sold
         let remainingAmountToSell = tokenHoldingToSell;
 
-        //logic checking each wallet has tokens to perfom transaction
-        for (let i = 0; i < wallets.length && remainingAmountToSell > 0; i++) {
-            const walletBalance = balances[i];
-            const walletAddress = wallets[i];
+        // Logic for selling tokens
+        for (const [walletAddress, wallet] of Object.entries(wallets)) {
+            const walletBalance = wallet.tokenBal;
+
+            if (remainingAmountToSell <= 0) break;
 
             if (walletBalance === 0) {
                 console.log(`Wallet ${walletAddress} has 0 tokens, skipping.`);
                 continue;
             }
 
-            // distribute tokens to all wallets
-            /**you can't distribute equally, some might be empty so need to share base on (%) */
-            const proportionalShare = (walletBalance / allWalletBalances) * tokenHoldingToSell;
-
+            const proportionalShare = (walletBalance / allTokenBalances) * tokenHoldingToSell;
 
             if (walletBalance < proportionalShare) {
-                //sell all tokens from this wallet
-                await makeSwap(tradeDirection, walletAddress, proportionalShare)
-                remainingAmountToSell -= walletBalance;
+                // we're selling all tokens
+                const amountToSwap = walletBalance
+
+                // Retry logic
+                let swapSuccessful = false;
+                while (!swapSuccessful) {
+                    swapSuccessful = await makeSwap(tradeDirection, wallet.privateKey, walletBalance);
+                    if (!swapSuccessful) {
+                        console.log(`Swap failed for wallet ${walletAddress}. Retrying...`);
+                    }
+                }
+
+                // Update wallet balance
+                wallets[walletAddress].tokenBal -= amountToSwap;
+                remainingAmountToSell -= amountToSwap;
             } else {
-                // wallet has all proportion shared to them
-                await makeSwap(tradeDirection, walletAddress, proportionalShare)
-                remainingAmountToSell -= proportionalShare;
+                // we're selling proportions
+                const amountToSwap = proportionalShare;
+
+                // Retry logic
+                let swapSuccessful = false;
+                while (!swapSuccessful) {
+                    swapSuccessful = await makeSwap(tradeDirection, wallet.privateKey, proportionalShare);
+                    if (!swapSuccessful) {
+                        console.log(`Swap failed for wallet ${walletAddress}. Retrying...`);
+                    }
+                }
+
+                // Update wallet balance
+                wallets[walletAddress].tokenBal -= amountToSwap;
+                remainingAmountToSell -= amountToSwap;
             }
-
-            console.log(`Remaining amount to buy: ${remainingAmountToSell.toFixed(2)}`)
-
         }
         return true
 
     } else if (tradeDirection === "BUY" && holdingPercentage > Config.sellPercentage) {
-        //get our buy percentage
-        const tokenHoldingToBuy = getTradeAmount(allSolBalances)
-        const percentageSell = (tokenHoldingToBuy / allSolBalances) * 100
+        const tokenHoldingToBuy = getTradeAmount(allSolBalances);
+        const percentageBuy = (tokenHoldingToBuy / allSolBalances) * 100;
 
-        console.log("Amount to buy", tokenHoldingToBuy.toLocaleString(), "\nPercentage (%):", percentageSell.toFixed(2))
-
-
-        //use this here to keep track of amount to buy
+        console.log(`Amount to Buy: ${tokenHoldingToBuy.toLocaleString()}`);
         let remainingAmountToBuy = tokenHoldingToBuy;
 
-        //logic checking each wallet has tokens to perfom transaction
-        for (let i = 0; i < wallets.length && remainingAmountToBuy > 0; i++) {
-            const walletBalance = balances[i];
-            const walletAddress = wallets[i];
+        // Logic for buying tokens
+        for (const [walletAddress, wallet] of Object.entries(wallets)) {
+            const walletBalance = wallet.solBalance;
 
-            if (walletBalance === 0) {
-                console.log(`Wallet ${walletAddress} has 0 tokens, skipping.`);
+            if (remainingAmountToBuy <= 0) break;
+
+            if (walletBalance <= 0.0005) {
+                console.log(`Wallet ${walletAddress} has 0 SOL, skipping.`);
                 continue;
             }
 
-            // distribute tokens to all wallets
-            /**you can't distribute equally, some might be empty so need to share base on (%) */
-            const proportionalShare = (walletBalance / allWalletBalances) * tokenHoldingToBuy;
-
+            const proportionalShare = (walletBalance / allSolBalances) * tokenHoldingToBuy;
 
             if (walletBalance < proportionalShare) {
-                //sell all tokens from this wallet
-                await makeSwap(tradeDirection, walletAddress, proportionalShare)
+                // Retry logic
+                let swapSuccessful = false;
+                while (!swapSuccessful) {
+                    swapSuccessful = await makeSwap(tradeDirection, wallet.privateKey, walletBalance);
+                    if (!swapSuccessful) {
+                        console.log(`Swap failed for wallet ${walletAddress}. Retrying...`);
+                    }
+                }
+
+                // Update wallet balance
+                wallets[walletAddress].tokenBal -= walletBalance;
                 remainingAmountToBuy -= walletBalance;
             } else {
-                // wallet has all proportion shared to them
-                await makeSwap(tradeDirection, walletAddress, proportionalShare)
+                // Retry logic
+                let swapSuccessful = false;
+                while (!swapSuccessful) {
+                    swapSuccessful = await makeSwap(tradeDirection, wallet.privateKey, proportionalShare);
+                    if (!swapSuccessful) {
+                        console.log(`Swap failed for wallet ${walletAddress}. Retrying...`);
+                    }
+                }
+
+                // Update wallet balance
+                wallets[walletAddress].tokenBal -= proportionalShare;
                 remainingAmountToBuy -= proportionalShare;
             }
-
-            console.log(`Remaining amount to sell: ${remainingAmountToBuy.toFixed(2)}`)
-
         }
         return true
-
     }
-
 }
+
 
 function waitForNextTrade(): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, 200000)); //20 secs
+    return new Promise(resolve => setTimeout(resolve, 5000000));
 }
 
+
+
+// save all wallet balance
+async function fetchWalletSaveBalance() {
+    // Read wallet secret keys from file
+    const wallets = fs.readFileSync("Wallets.txt", 'utf-8').split('\n').map(wallet => wallet.trim()).filter(wallet => wallet !== '');
+
+    // Fetch all token balances
+    const tokenBalances = await Promise.all(wallets.map(secretKey => getWalletBalance(secretKey)));
+
+    // Fetch all SOL balances
+    const solBalances = await Promise.all(wallets.map(secretKey => getBalance(secretKey)));
+
+    // Build the wallet data with public keys and balances
+    const walletsData: WalletData[] = wallets.map((secretKey, index) => {
+        const wallet = Keypair.fromSecretKey(bs58.decode(secretKey));
+        const walletAddress = wallet.publicKey.toString();
+
+        return {
+            walletAddress,
+            privateKey: secretKey,
+            solBalance: solBalances[index],
+            tokenBal: tokenBalances[index]
+        };
+    });
+
+
+    const walletsYaml: WalletsYaml = walletsData.reduce((obj, wallet) => {
+        obj[wallet.walletAddress] = {
+            privateKey: wallet.privateKey,
+            solBalance: wallet.solBalance,
+            tokenBal: wallet.tokenBal
+        };
+        return obj;
+    }, {} as WalletsYaml);
+
+    fs.writeFileSync('wallets.yaml', yaml.dump(walletsYaml), 'utf8');
+    return true;
+}
+
+
 (async () => {
+    await fetchWalletSaveBalance()
     let canTrade = true;
 
     while (canTrade) {
