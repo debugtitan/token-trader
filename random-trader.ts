@@ -36,6 +36,9 @@ interface WalletsYaml {
     };
 }
 
+function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
 
 function getTradeAmount(walletHolding: number | null): number | 0 {
     if (walletHolding === null) {
@@ -117,13 +120,12 @@ async function makeSwap(direction: TradeDirection, secretKey: string, swapAmount
 
     const blockHash = await client.getLatestBlockhashAndContext("finalized")
 
-    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: true })
+    const { txId } = await execute({ recentBlockHash: blockHash.value.blockhash, sendAndConfirm: false })
+
 
     console.log(`https://solscan.io/tx/${txId}`)
-    if (txId) {
-        return true;
-    }
-    return false;
+    await delay(20000)
+    return true
 
 }
 
@@ -190,6 +192,7 @@ async function tokenTrader() {
 
         // Logic for selling tokens
         for (const [walletAddress, wallet] of Object.entries(wallets)) {
+            await delay(10000)
             const walletBalance = wallet.tokenBal;
 
             if (remainingAmountToSell <= 0) break;
@@ -246,6 +249,7 @@ async function tokenTrader() {
 
         // Logic for buying tokens
         for (const [walletAddress, wallet] of Object.entries(wallets)) {
+            await delay(10000)
             const walletBalance = wallet.solBalance;
 
             if (remainingAmountToBuy <= 0) break;
